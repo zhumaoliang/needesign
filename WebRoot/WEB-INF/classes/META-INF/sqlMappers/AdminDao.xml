@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.digitalchina.webapp.admin.dao.AdminDao">
+<!-- ehcache缓存 -->
+	<cache type="org.mybatis.caches.ehcache.LoggingEhcache" />
+	<sql id="BASE_SQL">
+		userid,username,realname,email,phone,contact,question,answer,password,sex,usertype,state,registtime,updatetime,avatar,work_link,goodfield,chinnalid,validatacode,outdate,device_id,device_sys,um_device_token
+	</sql>
+	<!--邮箱验证 -->
+	<select id="getAdminVo" resultType="AdminVo" parameterType="hashmap" useCache="false">
+		SELECT *
+		FROM admin WHERE 1=1 and status='1'
+		<if test="name != null and name != ''">
+			AND name=#{name}
+	</if>
+	</select>
+	<!--用户注册 -->
+	<insert id="registerMember" parameterType="Member">
+		insert into member
+		(userid,username,realname,email,phone,contact,question,answer,password,sex,usertype,state,registtime,updatetime,avatar,work_link,goodfield,chinnalid,validatacode,outdate,device_id,device_sys,um_device_token,rongcloud_token)
+		values
+		(#{userid},#{username},#{realname},#{email},#{phone},#{contact},#{question},#{answer},#{password},#{sex},#{usertype},#{state},#{registtime},#{updatetime},#{avatar},#{work_link},#{goodfield},#{chinnalid},#{validatacode},#{outdate},#{device_id},#{device_sys},#{um_device_token},#{rongcloud_token})
+	</insert>
+	<!--根据邮箱,修改用户信息 -->
+	<update id="upMemberByUserId" parameterType="hashmap">
+		update member set
+		rongcloud_token=#{rongToken} where userid=#{userid}
+	</update>
+	<!--根据id,重置密码 -->
+	<update id="upUserPsw" parameterType="hashmap">
+		update member set
+		password=#{password} where phone=#{phone}
+	</update>
+	
+	<!-- 获取关注对象 -->
+	<select id="isAttention" parameterType="hashmap" resultType="AttentionVo" useCache="false">
+		select * from attention where userid=#{userid} and
+		attention_userid=#{attention_userid} 
+</select>
+	<!--插入关注 -->
+	<insert id="attention" parameterType="AttentionVo">
+		insert into attention
+		(userid,attention_userid,state,attention_time)
+		values(#{userid},#{attention_userid},#{state},#{attention_time})
+</insert>
+	<!--取消关注 -->
+	<insert id="cancleAttention" parameterType="hashmap">
+		update attention set
+		state=#{state},update_time=#{updatetime} where userid=#{userid} and
+		attention_userid=#{attention_userid}
+	</insert>
+	<!-- 获取关注数量 -->
+	<select id="countAttention" parameterType="hashmap" resultType="Long" useCache="false">
+		select count(*)
+		from attention a
+		<if test="type!='' and type != null and type==1">
+			inner join member m on a.attention_userid=m.userid and
+			a.userid=#{userid} and a.state='1'
+</if>
+		<if test="type!='' and type != null and type==0">
+			inner join member m on a.userid=m.userid and
+			a.attention_userid=#{userid} and a.state='1'
+</if>
+	</select>
+	<!-- 获取关注对象 -->
+	<select id="getAttentionList" parameterType="hashmap"
+		resultType="AttentionMember" useCache="false">
+		select 
+		<if test="type!='' and type != null and type==1">
+		a.attention_userid as userid, m.username as username,m.avatar as headurl,m.userprofile as userProfile
+		from attention a
+			inner join member m on a.attention_userid=m.userid and
+			a.userid=#{userid} and a.state='1'
+</if>
+		<if test="type!='' and type != null and type==0">
+		a.userid as userid, m.username as username,m.avatar as headurl,m.userprofile as userProfile
+		from attention a
+			inner join member m on a.userid=m.userid and
+			a.attention_userid=#{userid} and a.state='1'
+</if>
+		order by a.attention_time desc limit #{start},#{end}
+	</select>
+	<!-- 获取验证码 -->
+	<select id="getVerifyCode" parameterType="hashmap" resultType="VerifyCodeVo" useCache="false">
+		select * from verifycode where phone=#{phone}
+		<if test="type !=null and type !=''">
+			and type=#{type}
+		</if>
+		order by createtime desc;
+	</select>
+	<!--插入短信验证码 -->
+	<insert id="addCode" parameterType="VerifyCodeVo">
+		insert into verifycode
+		(phone,code,type,createtime,isuse)
+		values(#{phone},#{code},#{type},#{createtime},#{isuse})
+</insert>
+<!--根据phone,type修改验证码 -->
+	<update id="updateCode" parameterType="hashmap">
+		update verifycode set
+		isuse=#{isuse} where id=#{id}
+	</update>
+	<!--修改用户信息 -->
+	<update id="updateUserInfo" parameterType="hashmap">
+		update member set
+		username=#{username},avatar=#{avatar},userprofile=#{userprofile} where userid=#{userid}
+	</update>
+	<!--修改用户信息 -->
+	<update id="updateUmToken" parameterType="hashmap">
+		update member set
+		um_device_token=#{umtoken} where userid=#{userid}
+	</update>
+	<!--插入系统通知 -->
+	<insert id="insertNotify" parameterType="NotifyVo">
+		insert into notify
+		(id,title,message,timestamp,userid)
+		values(#{id},#{title},#{message},#{timestamp},#{userid})
+</insert>
+<!-- 获取系统通知 -->
+<select id="getPushSystemInfo" parameterType="hashmap"
+		resultType="NotifyVo">
+		select * from notify where  userid=#{userid} order by timestamp desc  limit 100
+	</select>
+</mapper>

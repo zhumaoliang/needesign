@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.digitalchina.webapp.prog.dao.DynamicDao">
+<!-- ehcache缓存 -->
+	<cache type="org.mybatis.caches.ehcache.LoggingEhcache" />
+	<sql id="BASE_SQL">
+		id,title,content,imgurl,num,state,createtime,updatetime,userid
+	</sql>
+	<!-- 发布动态 -->
+	<insert id="releaseDynamic" parameterType="DynamicVo" flushCache="true">
+		insert into dynamic
+		(id,content,imgurl,videoimgurl,praisnum,commentnum,state,createtime,updatetime,type,timestamp,isfacebook,isweixin,location,userid)
+		values(#{id},#{content},#{imgurl},#{videoimgurl},#{praisnum},#{commentnum},#{state},#{createtime},#{updatetime},#{type},#{timestamp},#{isfacebook},#{isweixin},#{location},#{userid})
+	</insert>
+	<!-- 获取发布的动态 数量 -->
+	<select id="countDynamic" parameterType="hashmap" resultType="Long" useCache="true">
+		select count(*) from dynamic d inner join member m on
+		m.userid=d.userid and m.state='1' and d.state='1'
+		<if test="userid !=null and userid != ''">
+			and d.userid=#{userid}
+		</if>
+	</select>
+	<select id="countMyAttentionDynamic" parameterType="hashmap"
+		resultType="Long" useCache="true">
+		select count(*) from dynamic d inner join attention a on
+		a.attention_userid=d.userid inner join member m on
+		m.userid=a.attention_userid inner join member mb on
+		mb.userid=a.userid where m.state='1' and
+		d.state='1' and a.state='1'
+		<if test="userid !=null and userid != ''">
+			and a.userid=#{userid}
+		</if>
+	</select>
+	<!--获取动态列表 -->
+	<select id="getDynamicList" resultType="IsDynamicVo"
+		parameterType="hashmap" useCache="true">
+		select m.userid as userid, m.username as
+		username,m.avatar as
+		headurl,d.id as id,d.content as
+		contents ,d.imgurl as imgurl,d.state
+		as
+		state,d.praisnum as totalLikes,d.timestamp as
+		createtime,d.commentnum as
+		totalComments,d.location as
+		location,d.videoimgurl as videoimgurl,d.category as postCategory ,d.background as postBackground ,d.description as postDetails ,d.type as type,d.sell as sell ,d.price as price,d.photos as photos from
+		dynamic d inner join member m on
+		m.userid=d.userid and
+		m.state='1' and
+		d.state='1'
+		<if test="userid !=null and userid != ''">
+			and d.userid=#{userid}
+		</if>
+		order by d.createtime desc,d.updatetime desc
+		limit
+		#{start},#{end}
+	</select>
+	<!--获取我关注的动态列表 -->
+	<select id="getMyAttentionDynamicList" resultType="IsDynamicVo"
+		parameterType="hashmap" useCache="true">
+		select m.userid as userid, m.username as
+		username,m.avatar as
+		headurl,d.id as id,d.content as
+		contents ,d.imgurl as imgurl,d.state
+		as
+		state,d.praisnum as
+		totalLikes,d.timestamp as
+		createtime,d.commentnum as
+		totalComments,d.location as
+		location,d.videoimgurl as videoimgurl,d.category as postCategory ,d.background as postBackground ,d.description as postDetails ,d.type as type,d.sell as sell ,d.price as price,d.photos as photos from
+		dynamic d inner join attention a on
+		a.attention_userid=d.userid inner
+		join member m on
+		m.userid=a.attention_userid inner join member mb on
+		mb.userid=a.userid where m.state='1' and
+		d.state='1' and a.state='1'
+		<if test="userid !=null and userid !=''">
+			and a.userid=#{userid}
+		</if>
+		order by d.createtime desc,d.updatetime
+		desc limit
+		#{start},#{end}
+	</select>
+	<!--根据id获取动态 -->
+	<select id="getDynamicById" resultType="DynamicVo"
+		parameterType="hashmap" useCache="true">
+		SELECT *
+		FROM dynamic WHERE 1=1 and state='1' AND 
+		id=#{dyid}
+		</select>
+	<!-- 根据id修改被点赞次数 -->
+	<update id="upDynamicNumById" parameterType="hashmap" flushCache="true">
+		update dynamic set
+		praisnum=#{total},updatetime=#{updatetime} where id=#{dyid}
+	</update>
+	<!-- 根据id修改被评论次数 -->
+	<update id="doUpCommentNum" parameterType="hashmap" flushCache="true">
+		update dynamic set
+		commentnum=#{total},updatetime=#{updatetime} where
+		id=#{dynamicid}
+	</update>
+	<!-- 发布评论 -->
+	<insert id="releaseComment" parameterType="hashmap" flushCache="true">
+		insert into comment
+		(id,content,dynamicid,commentid,createtime,touserid,userid)
+		values(#{id},#{content},#{dynamicid},#{commentid},#{createtime},#{touserid},#{userid})
+	</insert>
+	<!--统计发表评论数量 -->
+	<select id="countComment" resultType="Long"
+		parameterType="hashmap" useCache="true">
+		select count(*) from comment m inner join dynamic d on
+		d.id=m.dynamicid inner join member me on me.userid=m.userid and
+		d.state='1' and me.state='1'
+		<if test="dynamicid != '' and dynamicid !=null">
+		and m.dynamicid=#{dynamicid}
+		</if>
+	</select>
+	<!--获取评论列表 -->
+	<select id="getCommentList" resultType="CommentVo"
+		parameterType="hashmap" useCache="true">
+		select m.id as id,m.content as contents,m.dynamicid as
+		dynamicid,m.commentid as commentid,m.createtime as
+		createdate,m.touserid as touserid,m.userid as fromuserid
+		,me.username as fromuser from comment m inner join dynamic d on
+		d.id=m.dynamicid inner join member me on me.userid=m.userid and
+		d.state='1' and me.state='1'
+		<if test="dynamicid != '' and dynamicid !=null">
+		and m.dynamicid=#{dynamicid}
+		</if>
+		 order by m.createtime desc limit #{start},#{end}
+
+	</select>
+	<!--判断用户是否点赞 -->
+	<select id="checkIsPoint" resultType="PraiseVo" parameterType="hashmap" useCache="true">
+		SELECT *
+		FROM praise WHERE  userid=#{userid} and
+		dynamicid=#{dynamicid} 
+		</select>
+	<!-- 作品点赞 -->
+	<insert id="pointPraise" parameterType="PraiseVo" flushCache="true">
+		insert into praise
+		(userid,dynamicid,createtime,updatetime,state) values
+		(#{userid},#{dynamicid},#{createtime},#{updatetime},#{state})
+	</insert>
+	<!-- 取消点赞 -->
+	<update id="canclePointPraise" parameterType="hashmap" flushCache="true">
+		update praise set
+		state=#{state},updatetime=#{updatetime} where
+		userid=#{userid} and
+		dynamicid=#{dynamicid}
+	</update>
+	<!--获取生活圈数据根据生活圈id -->
+	<select id="getDynamicVoById" resultType="IsDynamicVo"
+		parameterType="hashmap" useCache="true">
+		select m.userid as userid, m.username as
+		username,m.avatar as
+		headurl,d.id as id,d.content as
+		contents ,d.imgurl as imgurl,d.state
+		as
+		state,d.praisnum as totalLikes,d.timestamp as
+		createtime,d.commentnum as
+		totalComments,d.location as
+		location,d.videoimgurl as videoimgurl,d.category as postCategory ,d.background as postBackground ,d.description as postDetails ,d.type as type,d.sell as sell ,d.price as price,d.photos as photos from
+		dynamic d inner join member m on
+		m.userid=d.userid and
+		m.state='1' and
+		d.state='1'
+		and d.id=#{id}
+	</select>
+</mapper>
